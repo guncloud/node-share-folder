@@ -1,0 +1,7 @@
+/lib/**/*.map
+/src/**/*.ts
+/.git
+/.vscode
+/pushall.sh
+/tsdoc
+/typedoc.sh
