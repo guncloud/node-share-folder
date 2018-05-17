@@ -308,3 +308,25 @@ X-Tm-Mk: 1979-09-05T23:09:00.000Z
   "type": "f"
 }
 ```
+
+## Support and contribute
+
+If you like the module, you can support the project by sending a [donation via PayPal](https://paypal.me/MarcelKloubert) to [me](https://github.com/mkloubert).
+
+To contribute, you can [open an issue](https://github.com/mkloubert/node-share-folder/issues) and/or fork this repository.
+
+To work with the code:
+
+* clone [this repository](https://github.com/mkloubert/node-share-folder)
+* create and change to a new branch, like `git checkout -b my_new_feature`
+* run `npm install` from your project folder
+* open that project folder in Visual Studio Code
+* now you can edit and debug there
+* commit your changes to your new branch and sync it with your forked GitHub repo
+* make a [pull request](https://github.com/mkloubert/node-share-folder/pulls)
+
+## Related projects
+
+### node-enumerable
+
+[node-enumerable](https://github.com/mkloubert/node-enumerable) is a [LINQ](https://en.wikipedia.org/wiki/Language_Integrated_Query) implementation for JavaScript, which runs in [Node.js](https://nodejs.org/) and browsers.

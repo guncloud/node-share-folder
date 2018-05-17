@@ -381,7 +381,7 @@ const IS_CLIENT_MODE = sf_helpers.toBooleanSafe(list) ||
 
                 return Enumerable.from( ALLOWED_IPS )
                                  .any(aip => IP.cidrSubnet(aip)
-                                             .contains(request.socket.remoteAddress))
+                                             .contains(request.socket.remoteAddress));
             },
             root: rootDir,
             ssl: ssl,
