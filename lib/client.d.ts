@@ -66,15 +66,16 @@ export declare class ShareFolderClient {
      * The account to use.
      */
     readonly account: sf_host.Account;
-    private delete(path, body?, headers?);
+    private delete(path, data?, headers?);
     /**
      * Downloads a file.
      *
      * @param {string} path The path to the remote file.
+     * @param {NodeJS.WritableStream} [stream] The optional destination stream to write to.
      *
-     * @return {Buffer} The directory entry of the file.
+     * @return {Promise<Buffer | undefined>} The promise with the downloaded data (if 'stream' is not defined).
      */
-    download(path: string, stream?: NodeJS.WritableStream): Promise<Buffer>;
+    download(path: string, stream?: NodeJS.WritableStream): Promise<Buffer | undefined>;
     private get(path, headers?);
     /**
      * Gets the address of the host.
@@ -92,8 +93,8 @@ export declare class ShareFolderClient {
      * Gets the TCP port of the host.
      */
     readonly port: number;
-    private post(path, body?, headers?);
-    private put(path, body?, headers?);
+    private post(path, data?, headers?);
+    private put(path, data?, headers?);
     /**
      * Removes a file or folder.
      *
@@ -102,7 +103,7 @@ export declare class ShareFolderClient {
      * @return {Promise<sf_host.DirectoryEntry>} The promise with the entry of the removed item.
      */
     remove(path: string): Promise<sf_host.DirectoryEntry>;
-    private request(path, method, body?, headers?);
+    private request(path, method, data?, headers?);
     /**
      * Gets if SSL should be used or not.
      */
@@ -111,9 +112,9 @@ export declare class ShareFolderClient {
      * Uploads a file.
      *
      * @param {string} path The path to the remote file.
-     * @param {Buffer} data The data to upload.
+     * @param {any} data The data (can be a stream) to upload.
      *
      * @return {sf_host.DirectoryEntry} The directory entry of the file.
      */
-    upload(path: string, data: Buffer): Promise<sf_host.DirectoryEntry>;
+    upload(path: string, data: any): Promise<sf_host.DirectoryEntry>;
 }

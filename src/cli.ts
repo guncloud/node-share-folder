@@ -25,6 +25,7 @@ import * as sf_host from './host';
 import * as Table from 'table';
 
 let ca: string;
+let canWrite = false;
 let cert: string;
 let del = false;
 let download = false;
@@ -78,6 +79,11 @@ for (const A in CMD_ARGS) {
                            .lastOrDefault(a => !sf_helpers.isEmptyString(a), undefined);
             break;
 
+        case 'can-write':
+            canWrite = Enumerable.from(ARGS)
+                                 .any(a => sf_helpers.toBooleanSafe(a));
+            break;
+
         case 'cert':
             cert = Enumerable.from(ARGS)
                              .lastOrDefault(a => !sf_helpers.isEmptyString(a), undefined);
@@ -129,7 +135,6 @@ for (const A in CMD_ARGS) {
             );
             break;
 
-        case 'ra':
         case 'reject-unauthorized':
             rejectUnauthorized = Enumerable.from(ARGS)
                                            .any(a => sf_helpers.toBooleanSafe(a));
@@ -163,6 +168,7 @@ if (showHelp) {
     sf_helpers.write_ln(`Examples:  share-folder .`);
     sf_helpers.write_ln(`           share-folder --cert=/ca/file --key=/key/file`);
     sf_helpers.write_ln(`           share-folder /path/to/folder --ips="192.168.0.0/24" --ips="192.168.5.0/24"`);
+    sf_helpers.write_ln(`           share-folder --can-write`);
     sf_helpers.write_ln(`           share-folder --user=mkloubert --password=P@ssword123!`);
     sf_helpers.write_ln(`           share-folder --list /path/on/remote`);
     sf_helpers.write_ln(`           share-folder --upload /path/on/remote < /path/to/local/file`);
@@ -170,6 +176,7 @@ if (showHelp) {
     sf_helpers.write_ln(`Options:`);
     sf_helpers.write_ln(` -?, --help                    Show this help screen.`);
     sf_helpers.write_ln(` --ca                          The path to SSL CA for secure HTTP mode.`);
+    sf_helpers.write_ln(` --can-write                   Clients can do write operations or not. Default: (false)`);
     sf_helpers.write_ln(` --cert                        The path to SSL CERT for secure HTTP mode.`);
     sf_helpers.write_ln(` -del, --delete                Deletes a file or folder.`);
     sf_helpers.write_ln(` -dl, --download               Downloads a file and sends it to stdout.`);
@@ -180,8 +187,8 @@ if (showHelp) {
     sf_helpers.write_ln(` -p, --password                The password for the authentification to use.`);
     sf_helpers.write_ln(` --port                        The TCP port to use. Default: 55555`);
     sf_helpers.write_ln(` --passphrase                  SSL passphrase.`);
-    sf_helpers.write_ln(` -ra, --reject-unauthorized    Reject unauthorized SSL connections. Default: (false)`);
-    sf_helpers.write_ln(` --ssl                         Use secure connection when connecting to a host.`);
+    sf_helpers.write_ln(` --reject-unauthorized         Reject unauthorized SSL connections. Default: (false)`);
+    sf_helpers.write_ln(` --ssl                         Use secure connection when connecting to a host. Default: (false)`);
     sf_helpers.write_ln(` -u, --user                    The username for the authentification to use.`);
     sf_helpers.write_ln(` -ul, --upload                 Uploads the data from stdin to a remote host.`);
     sf_helpers.write_ln();
@@ -210,9 +217,13 @@ if (sf_helpers.isEmptyString(passphrase)) {
 }
 if (sf_helpers.isEmptyString(user)) {
     user = undefined;
+} else {
+    user = sf_helpers.normalizeString(user);
 }
 if (sf_helpers.isEmptyString(password)) {
     password = undefined;
+} else {
+    password = sf_helpers.toStringSafe(password);
 }
 
 const IS_CLIENT_MODE = sf_helpers.toBooleanSafe(list) ||
@@ -311,17 +322,13 @@ const IS_CLIENT_MODE = sf_helpers.toBooleanSafe(list) ||
             };
         }
 
-        const ACCOUNTS: sf_host.Account[] = [];
-        if (!_.isNil(user) || !_.isNil(password)) {
-            ACCOUNTS.push({
-                name: user,
-                password: password,
-            });
-        }
-
         const HOST = new sf_host.ShareFolderHost({
-            accounts: ACCOUNTS,
+            accountValidator: (un, pwd) => {
+                return un === user &&
+                       pwd === password;
+            },
             allowed: IPS,
+            canWrite: canWrite,
             port: port,
             root: rootDir,
             ssl: ssl,

@@ -26,6 +26,12 @@ Share current folder:
 share-folder
 ```
 
+Show help:
+
+```bash
+share-folder --?
+```
+
 Share custom folder:
 
 ```bash
@@ -42,6 +48,12 @@ Define username and password:
 
 ```bash
 share-folder --user=mkloubert --password=P@ssword123!
+```
+
+Allow clients to write:
+
+```bash
+share-folder --can-write
 ```
 
 Upload a file:

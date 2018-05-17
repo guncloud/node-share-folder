@@ -19,6 +19,7 @@ import * as _ from 'lodash';
 import * as Enumerable from 'node-enumerable';
 import * as HTTP from 'http';
 import * as HTTPs from 'https';
+import * as IsStream from 'is-stream';
 const NormalizeHeaderCase = require("header-case-normalizer");
 import * as sf_helpers from './helpers';
 import * as sf_host from './host';
@@ -116,19 +117,20 @@ export class ShareFolderClient {
      */
     public readonly account: sf_host.Account;
 
-    private delete(path: string, body?: Buffer, headers?: any) {
+    private delete(path: string, data?: Buffer, headers?: any) {
         return this.request(path, 'DELETE',
-                            body, headers);
+                            data, headers);
     }
 
     /**
      * Downloads a file.
      *
      * @param {string} path The path to the remote file.
+     * @param {NodeJS.WritableStream} [stream] The optional destination stream to write to.
      *
-     * @return {Buffer} The directory entry of the file.
+     * @return {Promise<Buffer | undefined>} The promise with the downloaded data (if 'stream' is not defined).
      */
-    public async download(path: string, stream?: NodeJS.WritableStream): Promise<Buffer> {
+    public async download(path: string, stream?: NodeJS.WritableStream): Promise<Buffer | undefined> {
         const RESULT = await this.get(
             sf_helpers.normalizePath(path)
         );
@@ -145,9 +147,12 @@ export class ShareFolderClient {
             return Buffer.alloc(0);
         }
 
-        if (arguments.length < 1) {
+        if (arguments.length < 2) {
             return sf_helpers.readAll( RESULT.response );
         }
+
+        RESULT.response
+              .pipe( stream );
     }
 
     private get(path: string, headers?: any) {
@@ -202,14 +207,14 @@ export class ShareFolderClient {
      */
     public readonly port: number;
 
-    private post(path: string, body?: Buffer, headers?: any) {
+    private post(path: string, data?: any, headers?: any) {
         return this.request(path, 'POST',
-                            body, headers);
+                            data, headers);
     }
 
-    private put(path: string, body?: Buffer, headers?: any) {
+    private put(path: string, data?: Buffer, headers?: any) {
         return this.request(path, 'PUT',
-                            body, headers);
+                            data, headers);
     }
 
     /**
@@ -233,7 +238,7 @@ export class ShareFolderClient {
         );
     }
 
-    private request(path: string, method: string, body?: Buffer, headers?: any) {
+    private request(path: string, method: string, data?: any, headers?: any) {
         method = sf_helpers.toStringSafe(method).toUpperCase().trim();
         if ('' === method) {
             method = 'GET';
@@ -252,6 +257,8 @@ export class ShareFolderClient {
                     COMPLETED(new Error('Invalid path!'));
                 } else if (401 === resp.statusCode) {
                     COMPLETED(new Error('Unauthorized!'));
+                } else if (403 === resp.statusCode) {
+                    COMPLETED(new Error('Forbidden!'));
                 } else if (404 === resp.statusCode) {
                     COMPLETED(new Error('Not found!'));
                 } else {
@@ -325,8 +332,12 @@ export class ShareFolderClient {
 
                 newRequest = await requestFactory();
 
-                if (body && body.length > 0) {
-                    newRequest.write(body);
+                if (!_.isNil(data)) {
+                    if (IsStream.readable(data)) {
+                        data.pipe(newRequest);
+                    } else {
+                        newRequest.write(data);
+                    }
                 }
 
                 newRequest.end();
@@ -345,11 +356,11 @@ export class ShareFolderClient {
      * Uploads a file.
      *
      * @param {string} path The path to the remote file.
-     * @param {Buffer} data The data to upload.
+     * @param {any} data The data (can be a stream) to upload.
      *
      * @return {sf_host.DirectoryEntry} The directory entry of the file.
      */
-    public async upload(path: string, data: Buffer): Promise<sf_host.DirectoryEntry> {
+    public async upload(path: string, data: any): Promise<sf_host.DirectoryEntry> {
         const RESULT = await this.put(
             sf_helpers.normalizePath(path),
             data

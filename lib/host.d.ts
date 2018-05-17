@@ -14,6 +14,19 @@ export interface Account {
     password: string;
 }
 /**
+ * Validates an account.
+ *
+ * @param {string} username The username.
+ * @param {string} password The password.
+ *
+ * @return {AccountValidatorResult|PromiseLike<AccountValidatorResult>} The result that insicates if account is valid or not.
+ */
+export declare type AccountValidator = (username: string, password: string) => AccountValidatorResult | PromiseLike<AccountValidatorResult>;
+/**
+ * The possible results of an account validator.
+ */
+export declare type AccountValidatorResult = boolean | void | undefined | null;
+/**
  * A directory entry.
  */
 export interface DirectoryEntry {
@@ -60,13 +73,17 @@ export declare enum DirectoryEntryType {
  */
 export interface ShareFolderHostOptions {
     /**
-     * A list of one or more accounts.
+     * A function to validate an account.
      */
-    accounts?: Account | Account[];
+    accountValidator?: AccountValidator;
     /**
      * One or more allowed IP addresses in CIDR format.
      */
     allowed?: string | string[];
+    /**
+     * Indicates if clients can do write operations or not.
+     */
+    canWrite?: boolean;
     /**
      * The custom TCP port.
      */

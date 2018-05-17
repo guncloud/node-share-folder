@@ -46,6 +46,21 @@ export interface Account {
 }
 
 /**
+ * Validates an account.
+ *
+ * @param {string} username The username.
+ * @param {string} password The password.
+ *
+ * @return {AccountValidatorResult|PromiseLike<AccountValidatorResult>} The result that insicates if account is valid or not.
+ */
+export type AccountValidator = (username: string, password: string) => AccountValidatorResult | PromiseLike<AccountValidatorResult>;
+
+/**
+ * The possible results of an account validator.
+ */
+export type AccountValidatorResult = boolean | void | undefined | null;
+
+/**
  * A directory entry.
  */
 export interface DirectoryEntry {
@@ -96,13 +111,17 @@ export enum DirectoryEntryType {
  */
 export interface ShareFolderHostOptions {
     /**
-     * A list of one or more accounts.
+     * A function to validate an account.
      */
-    accounts?: Account | Account[];
+    accountValidator?: AccountValidator;
     /**
      * One or more allowed IP addresses in CIDR format.
      */
     allowed?: string | string[];
+    /**
+     * Indicates if clients can do write operations or not.
+     */
+    canWrite?: boolean;
     /**
      * The custom TCP port.
      */
@@ -208,14 +227,6 @@ export class ShareFolderHost extends Events.EventEmitter {
             ).distinct()
              .toArray();
 
-        const ACCOUNTS = sf_helpers.asArray(this.options.accounts).map(a => {
-            a = sf_helpers.cloneObject(a);
-            a.name = sf_helpers.normalizeString(a.name);
-            a.password = sf_helpers.toStringSafe(a.password);
-
-            return a;
-        });
-
         let realm = sf_helpers.toStringSafe(this.options.realm).trim();
         if ('' === realm) {
             realm = 'node-share-folder';
@@ -254,8 +265,9 @@ export class ShareFolderHost extends Events.EventEmitter {
         });
 
         // Basic Auth
-        APP.use((req, resp, next) => {
-            if (ACCOUNTS.length > 0) {
+        APP.use(async (req, resp, next) => {
+            const ACCOUNT_VALIDATOR = this.options.accountValidator;
+            if (ACCOUNT_VALIDATOR) {
                 let matchingAccount: Account | false = false;
 
                 const AUTHORIZATION = sf_helpers.toStringSafe(req.header('authorization')).trim();
@@ -278,10 +290,17 @@ export class ShareFolderHost extends Events.EventEmitter {
                     username = sf_helpers.normalizeString(username);
                     password = sf_helpers.toStringSafe(password);
 
-                    matchingAccount = Enumerable.from(ACCOUNTS).lastOrDefault(a => {
-                        return a.name === username &&
-                               a.password === password;
-                    }, false);
+                    const IS_VALID = sf_helpers.toBooleanSafe(
+                        await Promise.resolve(
+                            ACCOUNT_VALIDATOR(username, password)
+                        )
+                    );
+                    if (IS_VALID) {
+                        matchingAccount = {
+                            name: username,
+                            password: password,
+                        };
+                    }
                 }
 
                 if (false === matchingAccount) {
@@ -295,6 +314,22 @@ export class ShareFolderHost extends Events.EventEmitter {
             }
 
             return next();
+        });
+
+        // check read-only mode
+        APP.use((req, resp, next) => {
+            if (!sf_helpers.toBooleanSafe(this.options.canWrite)) {
+                switch (sf_helpers.normalizeString(req.method)) {
+                    case 'delete':
+                    case 'patch':
+                    case 'post':
+                    case 'put':
+                        return resp.status(403)
+                                   .send();
+                }
+            }
+
+            next();
         });
 
         APP.use((req, resp, next) => {
