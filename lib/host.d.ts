@@ -36,16 +36,25 @@ export interface DirectoryEntry {
     /**
      * The type.
      */
-    type: DirectoryEntryDirectory | DirectoryEntryFile;
+    type: DirectoryEntryType;
 }
 /**
- * Directory entry type value for a directory.
+ * List of types for directory entries.
  */
-export declare type DirectoryEntryDirectory = 'd';
-/**
- * Directory entry type value for a file.
- */
-export declare type DirectoryEntryFile = 'f';
+export declare enum DirectoryEntryType {
+    /**
+     * Unknown
+     */
+    Unknown = 0,
+    /**
+     * Directory / folder
+     */
+    Directory = 1,
+    /**
+     * File
+     */
+    File = 2,
+}
 /**
  * Options for a host.
  */

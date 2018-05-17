@@ -4,8 +4,6 @@ API and CLI application to run a REST host for sharing files and folders, writte
 
 ## Install
 
-## Installation
-
 ### As command line tool
 
 ```bash
@@ -19,6 +17,96 @@ npm install --save share-folder
 ```
 
 ## Usage
+
+### Command line
+
+Share current folder:
+
+```bash
+share-folder
+```
+
+Share custom folder:
+
+```bash
+share-folder /path/to/folder/to/share
+```
+
+Run in SSL mode:
+
+```bash
+share-folder --cert=/path/to/ca/file --key=/path/to/key/file
+```
+
+Define username and password:
+
+```bash
+share-folder --user=mkloubert --password=P@ssword123!
+```
+
+Upload a file:
+
+```bash
+share-folder --upload /path/to/file/on/remote.txt < ./file-to-upload.txt
+```
+
+Download a file:
+
+```bash
+share-folder --download /path/to/file/on/remote.txt > ./downloaded-file.txt
+```
+
+Remove a file or folder:
+
+```bash
+share-folder --delete /path/to/file/or/folder/on/remote
+```
+
+### Module
+
+#### Run host
+
+```typescript
+import { ShareFolderHost } from 'share-folder';
+
+const HOST = new ShareFolderHost({
+    port: 44444,  // default: 55555
+    root: '/path/to/root/folder',
+});
+
+await HOST.start();
+```
+
+#### Use client
+
+```typescript
+import * as fs from 'from';
+import { ShareFolderClient } from 'share-folder';
+
+const CLIENT = new ShareFolderClient({
+    host: 'example.com',
+    port: 44444,
+});
+
+// list directory
+const LIST = await CLIENT.list('/path/to/directory/on/remote');
+for (const ITEM of LIST) {
+    // TODO
+}
+
+// upload a file
+await CLIENT.upload('/path/to/file/on/remote.txt',
+                    fs.readFileSync('/path/of/file/to/upload'));
+
+// download file
+fs.writeFileSync(
+    '/path/to/downloaded/file.txt',
+    await CLIENT.download('/path/to/file/on/remote.txt')
+);
+
+// delete file or folder
+await CLIENT.remove('/path/to/file/or/folder/on/remote');
+```
 
 ## API
 

@@ -146,6 +146,10 @@ export function isEmptyString(val: any): boolean {
  */
 export function normalizePath(p: string) {
     p = toStringSafe(p);
+    if ('.' === p.trim()) {
+        p = '';
+    }
+
     p = p.split( Path.sep )
          .join('/');
 

@@ -68,17 +68,28 @@ export interface DirectoryEntry {
     /**
      * The type.
      */
-    type: DirectoryEntryDirectory | DirectoryEntryFile;
+    type: DirectoryEntryType;
 }
 
 /**
- * Directory entry type value for a directory.
+ * List of types for directory entries.
  */
-export type DirectoryEntryDirectory = 'd';
-/**
- * Directory entry type value for a file.
- */
-export type DirectoryEntryFile = 'f';
+export enum DirectoryEntryType {
+    /**
+     * Unknown
+     */
+    Unknown = 0,
+
+    /**
+     * Directory / folder
+     */
+    Directory = 1,
+
+    /**
+     * File
+     */
+    File = 2,
+}
 
 /**
  * Options for a host.
@@ -233,7 +244,9 @@ export class ShareFolderHost extends Events.EventEmitter {
         });
 
         // headers
-        APP.use((req, resp, next) => {
+        APP.use(function (req, resp, next) {
+            req['__vars'] = {};
+
             resp.setHeader('X-Powered-By', 'node-share-folder (Express)');
             resp.setHeader('X-TM-MK', Moment.utc('1979-09-05 23:09', 'YYYY-MM-DD HH:mm').toISOString());
 
@@ -277,6 +290,8 @@ export class ShareFolderHost extends Events.EventEmitter {
                     return resp.status(401)
                                .send();
                 }
+
+                req['__vars']['account'] = matchingAccount;
             }
 
             return next();
@@ -383,18 +398,18 @@ export class ShareFolderHost extends Events.EventEmitter {
                     mtime: sf_helpers.asUTC(stat.mtime).toISOString(),
                     name: n,
                     size: stat.size,
-                    type: stat.isDirectory() ? 'd' : 'f',
+                    type: stat.isDirectory() ? DirectoryEntryType.Directory
+                                             : DirectoryEntryType.File,
                 };
             } else {
                 return <any>stat;
             }
         };
 
-        // git directory list or
+        // get directory list or
         // file content / info
-        app.get('/:path?', async (req, resp) => {
-            const REQUESTED_PATH = sf_helpers.normalizePath(req.params.path);
-
+        app.get('/*', async (req, resp) => {
+            const REQUESTED_PATH = sf_helpers.normalizePath(req.path);
             if (IS_OUTSIDE(REQUESTED_PATH)) {
                 return resp.status(400)
                            .send();
@@ -435,21 +450,14 @@ export class ShareFolderHost extends Events.EventEmitter {
 
                     const STAT = await FSExtra.lstat( FULL_PATH );
 
-                    RESULT.push({
-                        ctime: sf_helpers.asUTC(STAT.ctime).toISOString(),
-                        mtime: sf_helpers.asUTC(STAT.mtime).toISOString(),
-                        name: NAME,
-                        size: STAT.size,
-                        type: STAT.isDirectory() ? 'd' : 'f',
-                    });
+                    RESULT.push(
+                        TO_DIRECTORY_ENTRY(STAT, NAME)
+                    );
                 }
 
                 if (RESULT.length > 0) {
-                    return SEND_JSON(resp, Enumerable.from(RESULT).orderBy(e => {
-                        return 'd' === e.type ? 0 : 1;
-                    }).thenBy(e => {
-                        return sf_helpers.normalizeString(e.name);
-                    }).toArray());
+                    return SEND_JSON(resp,
+                                     RESULT);
                 }
 
                 return resp.status(204)
@@ -475,8 +483,8 @@ export class ShareFolderHost extends Events.EventEmitter {
         });
 
         // create directory
-        app.post('/:path?', async (req, resp) => {
-            const REQUESTED_PATH = sf_helpers.normalizePath(req.params.path);
+        app.post('/*', async (req, resp) => {
+            const REQUESTED_PATH = sf_helpers.normalizePath(req.path);
             if (IS_OUTSIDE(REQUESTED_PATH) || ('/' === REQUESTED_PATH)) {
                 return resp.status(400)
                            .send();
@@ -498,8 +506,8 @@ export class ShareFolderHost extends Events.EventEmitter {
         });
 
         // write (new) file
-        app.put('/:path?', async (req, resp) => {
-            const REQUESTED_PATH = sf_helpers.normalizePath(req.params.path);
+        app.put('/*', async (req, resp) => {
+            const REQUESTED_PATH = sf_helpers.normalizePath(req.path);
             if (IS_OUTSIDE(REQUESTED_PATH) || ('/' === REQUESTED_PATH)) {
                 return resp.status(400)
                            .send();
@@ -509,6 +517,18 @@ export class ShareFolderHost extends Events.EventEmitter {
                 Path.join(rootDir, REQUESTED_PATH)
             );
 
+            if (await EXISTS(FILE)) {
+                if ((await FSExtra.lstat(FILE)).isDirectory()) {
+                    return resp.status(409)
+                               .send();
+                }
+            }
+
+            const DIR = Path.dirname(FILE);
+            if (!(await EXISTS(DIR))) {
+                await FSExtra.mkdirs(DIR);
+            }
+
             await FSExtra.writeFile(FILE,
                                     await sf_helpers.readAll(req));
 
@@ -517,8 +537,8 @@ export class ShareFolderHost extends Events.EventEmitter {
         });
 
         // delete file or folder
-        app.delete('/:path?', async (req, resp) => {
-            const REQUESTED_PATH = sf_helpers.normalizePath(req.params.path);
+        app.delete('/*', async (req, resp) => {
+            const REQUESTED_PATH = sf_helpers.normalizePath(req.path);
             if (IS_OUTSIDE(REQUESTED_PATH) || ('/' === REQUESTED_PATH)) {
                 return resp.status(400)
                            .send();
