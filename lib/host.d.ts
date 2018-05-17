@@ -1,5 +1,7 @@
+/// <reference types="express" />
 /// <reference types="node" />
 import * as Events from 'events';
+import * as Express from 'express';
 /**
  * An account entry.
  */
@@ -19,7 +21,7 @@ export interface Account {
  * @param {string} username The username.
  * @param {string} password The password.
  *
- * @return {AccountValidatorResult|PromiseLike<AccountValidatorResult>} The result that insicates if account is valid or not.
+ * @return {AccountValidatorResult|PromiseLike<AccountValidatorResult>} The result that indicates, if account is valid or not.
  */
 export declare type AccountValidator = (username: string, password: string) => AccountValidatorResult | PromiseLike<AccountValidatorResult>;
 /**
@@ -69,6 +71,19 @@ export declare enum DirectoryEntryType {
     File = 2,
 }
 /**
+ * Validates a request.
+ *
+ * @param {string} username The username.
+ * @param {string} password The password.
+ *
+ * @return {RequestValidatorResult|PromiseLike<RequestValidatorResult>} The result that indicates, if request is valid or not.
+ */
+export declare type RequestValidator = (request: Express.Request) => RequestValidatorResult | PromiseLike<RequestValidatorResult>;
+/**
+ * The possible results of an request validator.
+ */
+export declare type RequestValidatorResult = boolean | void | undefined | null;
+/**
  * Options for a host.
  */
 export interface ShareFolderHostOptions {
@@ -76,10 +91,6 @@ export interface ShareFolderHostOptions {
      * A function to validate an account.
      */
     accountValidator?: AccountValidator;
-    /**
-     * One or more allowed IP addresses in CIDR format.
-     */
-    allowed?: string | string[];
     /**
      * Indicates if clients can do write operations or not.
      */
@@ -92,6 +103,10 @@ export interface ShareFolderHostOptions {
      * The custom name of the real for basic authentification.
      */
     realm?: string;
+    /**
+     * A function that validates a request.
+     */
+    requestValidator?: RequestValidator;
     /**
      * The custom root directory.
      */

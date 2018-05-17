@@ -18,11 +18,45 @@
 import * as _ from 'lodash';
 import * as Enumerable from 'node-enumerable';
 import * as FSExtra from 'fs-extra';
+import * as IP from 'ip';
 import * as Minimist from 'minimist';
 import * as sf_client from './client';
 import * as sf_helpers from './helpers';
 import * as sf_host from './host';
 import * as Table from 'table';
+
+function showHelpScreen() {
+    sf_helpers.write_ln(`node-share-folder`);
+    sf_helpers.write_ln(`Syntax:    [root directory] [options]`);
+    sf_helpers.write_ln();
+    sf_helpers.write_ln(`Examples:  share-folder .`);
+    sf_helpers.write_ln(`           share-folder --cert=/ca/file --key=/key/file`);
+    sf_helpers.write_ln(`           share-folder /path/to/folder --ips="192.168.0.0/24" --ips="192.168.5.0/24"`);
+    sf_helpers.write_ln(`           share-folder --can-write`);
+    sf_helpers.write_ln(`           share-folder --user=mkloubert --password=P@ssword123!`);
+    sf_helpers.write_ln(`           share-folder --list /path/on/remote`);
+    sf_helpers.write_ln(`           share-folder --upload /path/on/remote < /path/to/local/file`);
+    sf_helpers.write_ln();
+    sf_helpers.write_ln(`Options:`);
+    sf_helpers.write_ln(` -?, --help               Show this help screen.`);
+    sf_helpers.write_ln(` --ca                     The path to SSL CA for secure HTTP mode.`);
+    sf_helpers.write_ln(` --can-write              Clients can do write operations or not. Default: (false)`);
+    sf_helpers.write_ln(` --cert                   The path to SSL CERT for secure HTTP mode.`);
+    sf_helpers.write_ln(` -del, --delete           Deletes a file or folder.`);
+    sf_helpers.write_ln(` -dl, --download          Downloads a file and sends it to stdout.`);
+    sf_helpers.write_ln(` -h, --host               The address of the host to connect to.`);
+    sf_helpers.write_ln(` --ips                    A list of one or more IPs (CIDR) to add to a whitelist of allowed remote clients.`);
+    sf_helpers.write_ln(` --key                    The path to SSL KEY for secure HTTP mode.`);
+    sf_helpers.write_ln(` --list                   List a remote directory.`);
+    sf_helpers.write_ln(` -p, --password           The password for the authentification to use.`);
+    sf_helpers.write_ln(` --port                   The TCP port to use. Default: 55555`);
+    sf_helpers.write_ln(` --passphrase             SSL passphrase.`);
+    sf_helpers.write_ln(` --reject-unauthorized    Reject unauthorized SSL connections. Default: (false)`);
+    sf_helpers.write_ln(` --ssl                    Use secure connection when connecting to a host. Default: (false)`);
+    sf_helpers.write_ln(` -u, --user               The username for the authentification to use.`);
+    sf_helpers.write_ln(` -ul, --upload            Uploads the data from stdin to a remote host.`);
+    sf_helpers.write_ln();
+}
 
 let ca: string;
 let canWrite = false;
@@ -45,6 +79,7 @@ let user: string;
 
 const CMD_ARGS = Minimist(process.argv.slice(2));
 
+const UNKNOWN_ARGS = [];
 for (const A in CMD_ARGS) {
     const ARGS = sf_helpers.asArray(CMD_ARGS[A]);
 
@@ -158,40 +193,26 @@ for (const A in CMD_ARGS) {
             upload = Enumerable.from(ARGS)
                                .any(a => sf_helpers.toBooleanSafe(a));
             break;
+
+        default:
+            UNKNOWN_ARGS.push( A );
+            break;
     }
 }
 
+if (UNKNOWN_ARGS.length > 0) {
+    sf_helpers.write_err_ln(
+        `Following options are unknown: ${ UNKNOWN_ARGS.join(', ') }`
+    );
+    sf_helpers.write_err_ln();
+
+    showHelpScreen();
+
+    process.exit(2);
+}
+
 if (showHelp) {
-    sf_helpers.write_ln(`node-share-folder`);
-    sf_helpers.write_ln(`Syntax:    [root directory] [options]`);
-    sf_helpers.write_ln();
-    sf_helpers.write_ln(`Examples:  share-folder .`);
-    sf_helpers.write_ln(`           share-folder --cert=/ca/file --key=/key/file`);
-    sf_helpers.write_ln(`           share-folder /path/to/folder --ips="192.168.0.0/24" --ips="192.168.5.0/24"`);
-    sf_helpers.write_ln(`           share-folder --can-write`);
-    sf_helpers.write_ln(`           share-folder --user=mkloubert --password=P@ssword123!`);
-    sf_helpers.write_ln(`           share-folder --list /path/on/remote`);
-    sf_helpers.write_ln(`           share-folder --upload /path/on/remote < /path/to/local/file`);
-    sf_helpers.write_ln();
-    sf_helpers.write_ln(`Options:`);
-    sf_helpers.write_ln(` -?, --help                    Show this help screen.`);
-    sf_helpers.write_ln(` --ca                          The path to SSL CA for secure HTTP mode.`);
-    sf_helpers.write_ln(` --can-write                   Clients can do write operations or not. Default: (false)`);
-    sf_helpers.write_ln(` --cert                        The path to SSL CERT for secure HTTP mode.`);
-    sf_helpers.write_ln(` -del, --delete                Deletes a file or folder.`);
-    sf_helpers.write_ln(` -dl, --download               Downloads a file and sends it to stdout.`);
-    sf_helpers.write_ln(` -h, --host                    The address of the host to connect to.`);
-    sf_helpers.write_ln(` --ips                         A list of one or more IPs (CIDR) to add to a whitelist of allowed remote clients.`);
-    sf_helpers.write_ln(` --key                         The path to SSL KEY for secure HTTP mode.`);
-    sf_helpers.write_ln(` --list                        List a remote directory.`);
-    sf_helpers.write_ln(` -p, --password                The password for the authentification to use.`);
-    sf_helpers.write_ln(` --port                        The TCP port to use. Default: 55555`);
-    sf_helpers.write_ln(` --passphrase                  SSL passphrase.`);
-    sf_helpers.write_ln(` --reject-unauthorized         Reject unauthorized SSL connections. Default: (false)`);
-    sf_helpers.write_ln(` --ssl                         Use secure connection when connecting to a host. Default: (false)`);
-    sf_helpers.write_ln(` -u, --user                    The username for the authentification to use.`);
-    sf_helpers.write_ln(` -ul, --upload                 Uploads the data from stdin to a remote host.`);
-    sf_helpers.write_ln();
+    showHelpScreen();
 
     process.exit(1);
 }
@@ -311,6 +332,26 @@ const IS_CLIENT_MODE = sf_helpers.toBooleanSafe(list) ||
             sf_helpers.write_err_ln(`${sf_host.DirectoryEntryType.Directory === DELETED_ITEM.type ? 'Directory' : 'File'} '${ FILE_PATH }' has been removed.`);
         }
     } else {
+        const ALLOWED_IPS =
+            Enumerable.from(
+                sf_helpers.asArray(
+                    this.options.allowed
+                ).map(a => sf_helpers.normalizeString(a))
+                 .filter(a => '' !== a)
+                 .map(a => {
+                          if (a.indexOf('/') < 0) {
+                              if (IP.isV4Format(a)) {
+                                  a += "/32";
+                              } else {
+                                  a += "/128";
+                              }
+                          }
+
+                          return a;
+                      })
+            ).distinct()
+             .toArray();
+
         let ssl: sf_host.ShareFolderHostSSLOptions;
         if (!_.isNil(ca) || !_.isNil(cert) || !_.isNil(key)) {
             ssl = {
@@ -327,9 +368,21 @@ const IS_CLIENT_MODE = sf_helpers.toBooleanSafe(list) ||
                 return un === user &&
                        pwd === password;
             },
-            allowed: IPS,
             canWrite: canWrite,
             port: port,
+            requestValidator: (request) => {
+                if (ALLOWED_IPS.length < 1) {
+                    return true;
+                }
+
+                if (IP.isLoopback(request.socket.remoteAddress)) {
+                    return true;
+                }
+
+                return Enumerable.from( ALLOWED_IPS )
+                                 .any(aip => IP.cidrSubnet(aip)
+                                             .contains(request.socket.remoteAddress))
+            },
             root: rootDir,
             ssl: ssl,
         });

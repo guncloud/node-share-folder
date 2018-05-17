@@ -23,7 +23,6 @@ import * as Events from 'events';
 import * as Express from 'express';
 import * as FS from 'fs';
 import * as FSExtra from 'fs-extra';
-import * as IP from 'ip';
 import * as MimeTypes from 'mime-types';
 import * as Moment from 'moment';
 import * as MomentTZ from 'moment-timezone';
@@ -51,7 +50,7 @@ export interface Account {
  * @param {string} username The username.
  * @param {string} password The password.
  *
- * @return {AccountValidatorResult|PromiseLike<AccountValidatorResult>} The result that insicates if account is valid or not.
+ * @return {AccountValidatorResult|PromiseLike<AccountValidatorResult>} The result that indicates, if account is valid or not.
  */
 export type AccountValidator = (username: string, password: string) => AccountValidatorResult | PromiseLike<AccountValidatorResult>;
 
@@ -107,6 +106,21 @@ export enum DirectoryEntryType {
 }
 
 /**
+ * Validates a request.
+ *
+ * @param {string} username The username.
+ * @param {string} password The password.
+ *
+ * @return {RequestValidatorResult|PromiseLike<RequestValidatorResult>} The result that indicates, if request is valid or not.
+ */
+export type RequestValidator = (request: Express.Request) => RequestValidatorResult | PromiseLike<RequestValidatorResult>;
+
+/**
+ * The possible results of an request validator.
+ */
+export type RequestValidatorResult = boolean | void | undefined | null;
+
+/**
  * Options for a host.
  */
 export interface ShareFolderHostOptions {
@@ -114,10 +128,6 @@ export interface ShareFolderHostOptions {
      * A function to validate an account.
      */
     accountValidator?: AccountValidator;
-    /**
-     * One or more allowed IP addresses in CIDR format.
-     */
-    allowed?: string | string[];
     /**
      * Indicates if clients can do write operations or not.
      */
@@ -130,6 +140,10 @@ export interface ShareFolderHostOptions {
      * The custom name of the real for basic authentification.
      */
     realm?: string;
+    /**
+     * A function that validates a request.
+     */
+    requestValidator?: RequestValidator;
     /**
      * The custom root directory.
      */
@@ -207,41 +221,22 @@ export class ShareFolderHost extends Events.EventEmitter {
         }
         rootDir = Path.resolve(rootDir);
 
-        const ALLOWED_IPS =
-            Enumerable.from(
-                sf_helpers.asArray(
-                    this.options.allowed
-                ).map(a => sf_helpers.normalizeString(a))
-                 .filter(a => '' !== a)
-                 .map(a => {
-                          if (a.indexOf('/') < 0) {
-                              if (IP.isV4Format(a)) {
-                                  a += "/32";
-                              } else {
-                                  a += "/128";
-                              }
-                          }
-
-                          return a;
-                      })
-            ).distinct()
-             .toArray();
-
         let realm = sf_helpers.toStringSafe(this.options.realm).trim();
         if ('' === realm) {
             realm = 'node-share-folder';
         }
 
         // IP check
-        APP.use((req, resp, next) => {
-            let canConnect = ALLOWED_IPS.length < 1;
-            if (!canConnect) {
-                canConnect = IP.isLoopback(req.socket.remoteAddress);
-            }
-            if (!canConnect) {
-                canConnect = Enumerable.from( ALLOWED_IPS )
-                                       .any(a => IP.cidrSubnet(a)
-                                                   .contains(req.socket.remoteAddress));
+        APP.use(async (req, resp, next) => {
+            let canConnect = true;
+
+            const REQUEST_VALIDATOR = this.options.requestValidator;
+            if (REQUEST_VALIDATOR) {
+                canConnect = sf_helpers.toBooleanSafe(
+                    await Promise.resolve(
+                        REQUEST_VALIDATOR( req )
+                    )
+                );
             }
 
             if (canConnect) {
