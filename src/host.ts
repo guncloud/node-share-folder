@@ -264,15 +264,15 @@ export class ShareFolderHost extends Events.EventEmitter {
             const ACCOUNT_VALIDATOR = this.options.accountValidator;
             if (ACCOUNT_VALIDATOR) {
                 let matchingAccount: Account | false = false;
+                
+                let username: string;
+                let password: string;
 
                 const AUTHORIZATION = sf_helpers.toStringSafe(req.header('authorization')).trim();
                 if (AUTHORIZATION.toLowerCase().startsWith('basic ')) {
                     const USERNAME_AND_PASSWORD = (
                         new Buffer(AUTHORIZATION.substr(6).trim(), 'base64')
                     ).toString('utf8');
-
-                    let username: string;
-                    let password: string;
 
                     const SEP = USERNAME_AND_PASSWORD.indexOf(':');
                     if (SEP > -1) {
@@ -284,18 +284,19 @@ export class ShareFolderHost extends Events.EventEmitter {
 
                     username = sf_helpers.normalizeString(username);
                     password = sf_helpers.toStringSafe(password);
+                }
 
-                    const IS_VALID = sf_helpers.toBooleanSafe(
-                        await Promise.resolve(
-                            ACCOUNT_VALIDATOR(username, password)
-                        )
-                    );
-                    if (IS_VALID) {
-                        matchingAccount = {
-                            name: username,
-                            password: password,
-                        };
-                    }
+                const IS_VALID = sf_helpers.toBooleanSafe(
+                    await Promise.resolve(
+                        ACCOUNT_VALIDATOR(username, password)
+                    )
+                );
+
+                if (IS_VALID) {
+                    matchingAccount = {
+                        name: username,
+                        password: password,
+                    };
                 }
 
                 if (false === matchingAccount) {
