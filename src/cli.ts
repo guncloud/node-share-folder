@@ -360,15 +360,16 @@ const IS_CLIENT_MODE = sf_helpers.toBooleanSafe(list) ||
             };
         }
 
-        const HOST = new sf_host.ShareFolderHost({
-            accountValidator: (un, pwd) => {
-                if (!_.isNil(user) || !_.isNil(password)) {
-                    return un === user &&
-                           pwd === password;
-                }
+        let accountValidator: sf_host.AccountValidator;
+        if (!_.isNil(user) || !_.isNil(password)) {
+            accountValidator = (un, pwd) => {
+                return un === user &&
+                       pwd === password;
+            };
+        }
 
-                return true;
-            },
+        const HOST = new sf_host.ShareFolderHost({
+            accountValidator: accountValidator,
             canWrite: canWrite,
             port: port,
             requestValidator: (request) => {

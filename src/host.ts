@@ -329,7 +329,7 @@ export class ShareFolderHost extends Events.EventEmitter {
         });
 
         APP.use(async (req, resp, next) => {
-            if (await FS.exists(rootDir)) {
+            if (FS.existsSync(rootDir)) {
                 if ((await FSExtra.stat(rootDir)).isDirectory()) {
                     return next();
                 }
