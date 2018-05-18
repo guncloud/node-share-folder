@@ -16,11 +16,13 @@
  */
 
 import * as _ from 'lodash';
+import * as HtmlEntities from 'html-entities';
 import * as HTTP from 'http';
 import * as HTTPs from 'https';
 import * as Enumerable from 'node-enumerable';
 import * as Events from 'events';
 import * as Express from 'express';
+import * as ExpressUserAgent from 'express-useragent';
 import * as FS from 'fs';
 import * as FSExtra from 'fs-extra';
 import * as MimeTypes from 'mime-types';
@@ -226,6 +228,8 @@ export class ShareFolderHost extends Events.EventEmitter {
             realm = 'node-share-folder';
         }
 
+        APP.use( ExpressUserAgent.express() );
+
         // IP check
         APP.use(async (req, resp, next) => {
             let canConnect = true;
@@ -392,6 +396,16 @@ export class ShareFolderHost extends Events.EventEmitter {
             );
         };
 
+        const IS_BROWSER = (req: Express.Request) => {
+            const UA = req.useragent;
+            if (UA) {
+                return (UA.isDesktop || UA.isMobile) &&
+                       !UA.isCurl;
+            }
+
+            return false;
+        };
+
         const IS_OUTSIDE = (requestedPath: string) => {
             requestedPath = sf_helpers.normalizePath(requestedPath);
 
@@ -467,6 +481,9 @@ export class ShareFolderHost extends Events.EventEmitter {
             const SELF_STAT = await FSExtra.stat( FILE_OR_FOLDER );
 
             if (SELF_STAT.isDirectory()) {
+                const JSON_LIST = '1' === sf_helpers.normalizeString(req.query['json']);
+                const HTML_LIST = '1' === sf_helpers.normalizeString(req.query['html']);
+
                 resp.setHeader(HEADER_TYPE, 'd');
 
                 const RESULT: DirectoryEntry[] = [];
@@ -479,17 +496,102 @@ export class ShareFolderHost extends Events.EventEmitter {
 
                     RESULT.push(
                         TO_DIRECTORY_ENTRY(await FSExtra.stat( FULL_PATH ),
-                                           NAME)
+                                            NAME)
                     );
                 }
 
-                if (RESULT.length > 0) {
-                    return SEND_JSON(resp,
-                                     RESULT);
-                }
+                if (!JSON_LIST && (HTML_LIST || IS_BROWSER(req))) {
+                    resp.setHeader('Content-Type',
+                                   'text/html; charset=utf8');
 
-                return resp.status(204)
-                           .send();
+                    const HTML_ENCODER = new HtmlEntities.Html4Entities();
+
+                    let html = '<html>';
+
+                    html += '<head>';
+                    html += `<title>Index of ${ HTML_ENCODER.encode(REQUESTED_PATH) } (node-share-folder)</title>`;
+                    html += '</head>';
+
+                    html += '<body>';
+                    html += `<h1>Index of ${ HTML_ENCODER.encode(REQUESTED_PATH) }</h1>`;
+
+                    html += '<table>';
+                    html += '<thead>';
+                    html += '<tr>';
+                    html += '<th align="left">Name</th>';
+                    html += '<th align="center">Description</th>';
+                    html += '<th align="center">Last modified</th>';
+                    html += '<th align="right">Size</th>';
+                    html += '</tr>';
+                    html += '</thead>';
+
+                    html += '<tbody>';
+
+                    html += '<tr>';
+                    html += `<td colspan="4"><hr></td>`;
+                    html += '</tr>';
+
+                    if ('/' !== REQUESTED_PATH) {
+                        html += '<tr>';
+                        html += `<td align="left"><a href="${ sf_helpers.normalizePath( Path.dirname(REQUESTED_PATH) ) }">..</a></td>`;
+                        html += '<td align="center">&nbsp;</td>';
+                        html += '<td align="center">&nbsp;</td>';
+                        html += '<td align="right">&nbsp;</td>';
+                        html += '</tr>';
+                    }
+
+                    Enumerable.from( RESULT ).orderBy(i => {
+                        return DirectoryEntryType.Directory === i.type ? 0 : 1;
+                    }).thenBy(i => {
+                        return sf_helpers.normalizeString( i.name );
+                    }).forEach(i => {
+                        let itemPath = REQUESTED_PATH;
+                        if ('/' !== REQUESTED_PATH) {
+                            itemPath += '/';
+                        }
+                        itemPath += i.name;
+
+                        let contentType: false | string = false;
+                        if (DirectoryEntryType.File === i.type) {
+                            contentType = MimeTypes.lookup(i.name);
+                        }
+                        if (false === contentType) {
+                            contentType = '';
+                        }
+
+                        html += '<tr>';
+                        html += `<td align="left"><a href="${ sf_helpers.normalizePath( itemPath ) }">${ HTML_ENCODER.encode(i.name) }</a>&nbsp;</td>`;
+                        html += `<td align="center">&nbsp;${ HTML_ENCODER.encode(DirectoryEntryType.Directory === i.type ? '<DIR>' : sf_helpers.normalizeString(contentType)) }&nbsp;</td>`;
+                        html += `<td align="center">&nbsp;${ HTML_ENCODER.encode(Moment.utc(i.mtime).format('YYYY-MM-DD HH:mm:ss') + ' +00:00') }&nbsp;</td>`;
+                        html += `<td align="right">&nbsp;${ DirectoryEntryType.Directory === i.type ? '&nbsp' : i.size }</td>`;
+                        html += '</tr>';
+                    });
+
+                    html += '<tr>';
+                    html += `<td colspan="4"><hr></td>`;
+                    html += '</tr>';
+
+                    html += '</tbody>';
+
+                    html += '</table>';
+
+                    html += `<address><a href="https://github.com/mkloubert/node-share-folder" target="_blank">node-share-folder</a> server at ${ HTML_ENCODER.encode(req.hostname) + ':' + this.port }</address>`;
+
+                    html += '</body>';
+
+                    html += '</html>';
+
+                    return resp.status(200)
+                               .send(new Buffer(html, 'utf8'));
+                } else {
+                    if (RESULT.length > 0) {
+                        return SEND_JSON(resp,
+                                            RESULT);
+                    }
+
+                    return resp.status(204)
+                               .send();
+                }
             } else {
                 resp.setHeader(HEADER_TYPE, 'f');
                 resp.setHeader('Content-Disposition', `attachment; filename="${ SanitizeFilename(
