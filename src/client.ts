@@ -324,7 +324,7 @@ export class ShareFolderClient {
                         const HTTP_OPTS = <HTTP.RequestOptions>opts;
                         HTTP_OPTS.protocol = 'http:';
 
-                        return HTTPs.request(
+                        return HTTP.request(
                             HTTP_OPTS, CALLBACK_SYNC
                         );
                     };
