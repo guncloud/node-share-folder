@@ -264,7 +264,7 @@ export class ShareFolderHost extends Events.EventEmitter {
             const ACCOUNT_VALIDATOR = this.options.accountValidator;
             if (ACCOUNT_VALIDATOR) {
                 let matchingAccount: Account | false = false;
-                
+
                 let username: string;
                 let password: string;
 
