@@ -20,6 +20,7 @@ import * as Enumerable from 'node-enumerable';
 import * as FSExtra from 'fs-extra';
 import * as IP from 'ip';
 import * as Minimist from 'minimist';
+import * as Path from 'path';
 import * as sf_client from './client';
 import * as sf_helpers from './helpers';
 import * as sf_host from './host';
@@ -55,6 +56,7 @@ function showHelpScreen() {
     sf_helpers.write_ln(` --ssl                    Use secure connection when connecting to a host. Default: (false)`);
     sf_helpers.write_ln(` -u, --user               The username for the authentification to use.`);
     sf_helpers.write_ln(` --upload                 Uploads the data from stdin to a remote host.`);
+    sf_helpers.write_ln(` -v, --version            Display the version of the app.`);
     sf_helpers.write_ln();
 }
 
@@ -73,6 +75,7 @@ let port: number;
 let rejectUnauthorized;
 let rootDir: string;
 let showHelp = false;
+let showVersion = false;
 let ssl = false;
 let upload = false;
 let user: string;
@@ -191,6 +194,12 @@ for (const A in CMD_ARGS) {
                                .any(a => sf_helpers.toBooleanSafe(a));
             break;
 
+        case 'v':
+        case 'version':
+            showVersion = Enumerable.from(ARGS)
+                                    .any(a => sf_helpers.toBooleanSafe(a));
+            break;
+
         default:
             UNKNOWN_ARGS.push( A );
             break;
@@ -212,6 +221,18 @@ if (showHelp) {
     showHelpScreen();
 
     process.exit(1);
+}
+
+if (showVersion) {
+    const PACKAGE_JSON = JSON.parse(
+        FSExtra.readFileSync(
+            Path.join(__dirname, '..', 'package.json')
+        ).toString('utf8')
+    );
+
+    console.log(`${ PACKAGE_JSON.version }`);
+
+    process.exit(3);
 }
 
 if (sf_helpers.isEmptyString(rootDir)) {
