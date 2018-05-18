@@ -332,7 +332,7 @@ const IS_CLIENT_MODE = sf_helpers.toBooleanSafe(list) ||
         const ALLOWED_IPS =
             Enumerable.from(
                 sf_helpers.asArray(
-                    this.options.allowed
+                    IPS
                 ).map(a => sf_helpers.normalizeString(a))
                  .filter(a => '' !== a)
                  .map(a => {
