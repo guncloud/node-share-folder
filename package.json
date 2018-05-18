@@ -1,6 +1,6 @@
 {
   "name": "share-folder",
-  "version": "0.7.3",
+  "version": "0.7.4",
   "description": "API and CLI application to run a REST host for sharing files and folders.",
   "main": "lib/index.js",
   "bin": {
@@ -23,7 +23,12 @@
     "http",
     "https",
     "cli",
-    "ssl"
+    "ssl",
+    "typescript",
+    "library",
+    "module",
+    "command",
+    "line"
   ],
   "author": "mkloubert",
   "license": "LGPL-3.0",
