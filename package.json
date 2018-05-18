@@ -1,6 +1,6 @@
 {
   "name": "share-folder",
-  "version": "0.6.0",
+  "version": "0.7.0",
   "description": "API and CLI application to run a REST host for sharing files and folders.",
   "main": "lib/index.js",
   "bin": {

@@ -76,6 +76,8 @@ share-folder --delete /path/to/file/or/folder/on/remote
 
 ### Module
 
+Complete documentation about the classes, interfaces and functions can be found [here](https://mkloubert.github.io/node-share-folder/).
+
 #### Run host
 
 ```typescript
