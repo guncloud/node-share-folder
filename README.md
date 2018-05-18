@@ -1,3 +1,6 @@
+[![npm](https://img.shields.io/npm/v/share-folder.svg)](https://www.npmjs.com/package/share-folder)
+[![npm](https://img.shields.io/npm/dt/share-folder.svg?label=npm%20downloads)](https://www.npmjs.com/package/share-folder)
+
 # node-share-folder
 
 API and CLI application to run a REST host for sharing files and folders, written for [Node.js 7+](https://nodejs.org).
