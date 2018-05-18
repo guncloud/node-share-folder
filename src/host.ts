@@ -327,9 +327,9 @@ export class ShareFolderHost extends Events.EventEmitter {
             next();
         });
 
-        APP.use((req, resp, next) => {
-            if (FSExtra.existsSync(rootDir)) {
-                if (FSExtra.lstatSync(rootDir).isDirectory()) {
+        APP.use(async (req, resp, next) => {
+            if (await FS.exists(rootDir)) {
+                if ((await FSExtra.stat(rootDir)).isDirectory()) {
                     return next();
                 }
             }
@@ -384,10 +384,8 @@ export class ShareFolderHost extends Events.EventEmitter {
         const GET_DIRECTORY_ENTRY = async function (p: string, n?: string): Promise<DirectoryEntry> {
             p = sf_helpers.toStringSafe(p);
 
-            const STAT = await FSExtra.lstat(p);
-
             return TO_DIRECTORY_ENTRY(
-                await FSExtra.lstat(p),
+                await FSExtra.stat(p),
                 arguments.length < 2 ? Path.basename(p)
                                      : sf_helpers.toStringSafe(n),
             );
@@ -465,7 +463,7 @@ export class ShareFolderHost extends Events.EventEmitter {
                 );
             }
 
-            const SELF_STAT = await FSExtra.lstat( FILE_OR_FOLDER );
+            const SELF_STAT = await FSExtra.stat( FILE_OR_FOLDER );
 
             if (SELF_STAT.isDirectory()) {
                 resp.setHeader(HEADER_TYPE, 'd');
@@ -478,10 +476,9 @@ export class ShareFolderHost extends Events.EventEmitter {
                         Path.join(FILE_OR_FOLDER, NAME)
                     );
 
-                    const STAT = await FSExtra.lstat( FULL_PATH );
-
                     RESULT.push(
-                        TO_DIRECTORY_ENTRY(STAT, NAME)
+                        TO_DIRECTORY_ENTRY(await FSExtra.stat( FULL_PATH ),
+                                           NAME)
                     );
                 }
 
@@ -548,7 +545,7 @@ export class ShareFolderHost extends Events.EventEmitter {
             );
 
             if (await EXISTS(FILE)) {
-                if ((await FSExtra.lstat(FILE)).isDirectory()) {
+                if ((await FSExtra.stat(FILE)).isDirectory()) {
                     return resp.status(409)
                                .send();
                 }
@@ -583,7 +580,7 @@ export class ShareFolderHost extends Events.EventEmitter {
                            .send();
             }
 
-            const STAT = await FSExtra.lstat(FILE_OR_FOLDER);
+            const STAT = await FSExtra.stat(FILE_OR_FOLDER);
 
             if (STAT.isDirectory()) {
                 await FSExtra.remove(FILE_OR_FOLDER);

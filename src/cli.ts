@@ -42,8 +42,8 @@ function showHelpScreen() {
     sf_helpers.write_ln(` --ca                     The path to SSL CA for secure HTTP mode.`);
     sf_helpers.write_ln(` --can-write              Clients can do write operations or not. Default: (false)`);
     sf_helpers.write_ln(` --cert                   The path to SSL CERT for secure HTTP mode.`);
-    sf_helpers.write_ln(` -del, --delete           Deletes a file or folder.`);
-    sf_helpers.write_ln(` -dl, --download          Downloads a file and sends it to stdout.`);
+    sf_helpers.write_ln(` --delete                 Deletes a file or folder.`);
+    sf_helpers.write_ln(` --download               Downloads a file and sends it to stdout.`);
     sf_helpers.write_ln(` -h, --host               The address of the host to connect to.`);
     sf_helpers.write_ln(` --ips                    A list of one or more IPs (CIDR) to add to a whitelist of allowed remote clients.`);
     sf_helpers.write_ln(` --key                    The path to SSL KEY for secure HTTP mode.`);
@@ -54,7 +54,7 @@ function showHelpScreen() {
     sf_helpers.write_ln(` --reject-unauthorized    Reject unauthorized SSL connections. Default: (false)`);
     sf_helpers.write_ln(` --ssl                    Use secure connection when connecting to a host. Default: (false)`);
     sf_helpers.write_ln(` -u, --user               The username for the authentification to use.`);
-    sf_helpers.write_ln(` -ul, --upload            Uploads the data from stdin to a remote host.`);
+    sf_helpers.write_ln(` --upload                 Uploads the data from stdin to a remote host.`);
     sf_helpers.write_ln();
 }
 
@@ -124,13 +124,11 @@ for (const A in CMD_ARGS) {
                              .lastOrDefault(a => !sf_helpers.isEmptyString(a), undefined);
             break;
 
-        case 'del':
         case 'delete':
             del = Enumerable.from(ARGS)
                             .any(a => sf_helpers.toBooleanSafe(a));
             break;
 
-        case 'dl':
         case 'download':
             download = Enumerable.from(ARGS)
                                  .any(a => sf_helpers.toBooleanSafe(a));
@@ -188,7 +186,6 @@ for (const A in CMD_ARGS) {
             );
             break;
 
-        case 'ul':
         case 'upload':
             upload = Enumerable.from(ARGS)
                                .any(a => sf_helpers.toBooleanSafe(a));
@@ -381,7 +378,7 @@ const IS_CLIENT_MODE = sf_helpers.toBooleanSafe(list) ||
 
                 return Enumerable.from( ALLOWED_IPS )
                                  .any(aip => IP.cidrSubnet(aip)
-                                             .contains(request.socket.remoteAddress));
+                                               .contains(request.socket.remoteAddress));
             },
             root: rootDir,
             ssl: ssl,
