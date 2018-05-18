@@ -492,6 +492,9 @@ export class ShareFolderHost extends Events.EventEmitter {
                            .send();
             } else {
                 resp.setHeader(HEADER_TYPE, 'f');
+                resp.setHeader('Content-Disposition', `attachment; filename="${ SanitizeFilename(
+                    Path.basename( FILE_OR_FOLDER )
+                ) }"`);
 
                 const CONTENT_TYPE = MimeTypes.lookup(FILE_OR_FOLDER);
                 if (false !== CONTENT_TYPE) {
