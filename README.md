@@ -212,6 +212,7 @@ Possible respose:
 ```http
 HTTP/1.1 200 OK
 Connection: close
+Content-Disposition: attachment; filename="test-file.txt"
 Content-Length: 1706
 Content-Type: text/plain
 Date: Tue, 15 May 2018 17:22:38 GMT
