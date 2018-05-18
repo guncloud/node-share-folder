@@ -593,10 +593,15 @@ export class ShareFolderHost extends Events.EventEmitter {
                                .send();
                 }
             } else {
+                const VIEW_FILE = '1' === sf_helpers.normalizeString(req.query['view']);
+
                 resp.setHeader(HEADER_TYPE, 'f');
-                resp.setHeader('Content-Disposition', `attachment; filename="${ SanitizeFilename(
-                    Path.basename( FILE_OR_FOLDER )
-                ) }"`);
+
+                if (!VIEW_FILE) {
+                    resp.setHeader('Content-Disposition', `attachment; filename="${ SanitizeFilename(
+                        Path.basename( FILE_OR_FOLDER )
+                    ) }"`);
+                }
 
                 const CONTENT_TYPE = MimeTypes.lookup(FILE_OR_FOLDER);
                 if (false !== CONTENT_TYPE) {
